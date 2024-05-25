@@ -1,3 +1,4 @@
+// serviceWorker.js - Client-side Service Worker Registration and Push Subscription
 import axios from 'axios';
 
 function urlBase64ToUint8Array(base64String) {
@@ -11,7 +12,7 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-export async function regSw() {
+async function regSw() {
     if ('serviceWorker' in navigator) {
         try {
             const reg = await navigator.serviceWorker.register('/sw.js');
@@ -25,8 +26,10 @@ export async function regSw() {
     }
 }
 
-export async function subscribe(serviceWorkerReg) {
-    let subscription = await serviceWorkerReg.pushManager.getSubscription();
+let subscription = null;
+
+async function subscribe(serviceWorkerReg) {
+    subscription = await serviceWorkerReg.pushManager.getSubscription();
     if (subscription === null) {
         const response = await axios.get('http://localhost:9000/vapidPublicKey');
         const applicationServerKey = urlBase64ToUint8Array(response.data);
@@ -34,9 +37,21 @@ export async function subscribe(serviceWorkerReg) {
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey,
         });
-        await axios.post('http://localhost:9000/subscribe', subscription);
         console.log('Subscribed:', subscription);
     } else {
         console.log('Already subscribed:', subscription);
     }
 }
+
+async function sendPush() {
+    console.log("Sending Push...");
+    await axios.post('http://localhost:9000/subscribe', subscription, {
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    console.log("Push Sent...");
+}
+
+// Export functions for use in other parts of your application
+export { regSw, subscribe, sendPush };

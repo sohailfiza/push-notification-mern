@@ -1,8 +1,14 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const Subscription = new Schema({
-    endpoint: String,
-    expirationTime: Number,
+    endpoint: {
+        type: String,
+        unique: true
+    },
+    expirationTime: {
+        type: Number,
+        default: 259200
+    },
     keys: {
         p256dh: String,
         auth: String,

@@ -1,76 +1,78 @@
-require('dotenv').config();
-
 const express = require('express');
-const webPush = require('web-push');
-const mongoose = require('mongoose');
+const webpush = require('web-push');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-const SubscriptionModel = require('./subscriptionSchema'); // Ensure this file is correctly defined
+const mongoose = require('mongoose');
+const subscriptionModel = require('./subscriptionSchema');
+
 const app = express();
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cors());
+app.use(bodyParser.json());
 
-const vapidKeys = {
-    publicKey: process.env.PUBLIC_KEY,
-    privateKey: process.env.PRIVATE_KEY,
-};
+// VAPID keys should be generated only once.
+const vapidKeys = webpush.generateVAPIDKeys();
 
-webPush.setVapidDetails(
-    'mailto:uct8417uun@tidissajiiu.com',
+webpush.setVapidDetails(
+    'mailto:abc@def.org',
     vapidKeys.publicKey,
     vapidKeys.privateKey
 );
 
-app.post('/subscribe', async (req, res) => {
-    try {
-        const newSubscription = await SubscriptionModel.create(req.body);
-        res.status(201).json(newSubscription);
-    } catch (error) {
-        console.error('Error subscribing:', error);
-        res.sendStatus(500);
-    }
+// Store subscriptions in memory (in a real application, store in DB)
+let subscriptions = [];
+let subscription
+
+app.get('/', (req, res) => {
+    res.send('server running...');
 });
 
 app.get('/vapidPublicKey', (req, res) => {
     res.send(vapidKeys.publicKey);
 });
 
-app.post('/sendNotification', async (req, res) => {
-    try {
-        const subscriptions = await SubscriptionModel.find();
-        const notificationPayload = JSON.stringify({
-            title: 'Hello from server',
-            description: 'This message is coming from the server',
-            image: 'https://cdn2.vectorstock.com/i/thumb-large/94/66/emoji-smile-icon-symbol-smiley-face-vector-26119466.jpg',
-        });
-
-        const options = {
-            TTL: 60,
-        };
-
-        await Promise.all(
-            subscriptions.map(sub => 
-                webPush.sendNotification(sub, notificationPayload, options)
-                    .catch(error => {
-                        console.error('Error sending notification:', error);
-                    })
-            )
-        );
-
-        res.sendStatus(200);
-    } catch (error) {
-        console.error('Error sending notification:', error);
-        res.sendStatus(500);
-    }
+app.post('/subscribe', (req, res) => {
+    subscription = req.body;
+    subscriptions.push(subscription);
+    saveSubscription()
+    console.log(subscription);
+    res.status(201).json({subscriptions});
 });
 
-const port = process.env.PORT || 9000;
-const DatabaseName = 'pushDb';
-const DatabaseURI = process.env.MONGODB_URI || `mongodb+srv://admin:admin12345@cluster0.uqsov2y.mongodb.net/${DatabaseName}`;
+app.post('/sendNotification', (req, res) => {
+    const notificationPayload = JSON.stringify({
+        title: req.body.title,
+        message: req.body.message
+    });
 
-mongoose.connect(DatabaseURI, { useNewUrlParser: true, useUnifiedTopology: true })
+    const promises = subscriptions.map(subscription =>
+        webpush.sendNotification(subscription, notificationPayload)
+    );
+
+    Promise.all(promises)
+        .then(() => res.sendStatus(200))
+        .catch(err => {
+            console.error('Error sending notification, error: ', err);
+            res.sendStatus(500);
+        });
+});
+
+
+async function saveSubscription(){
+    try {
+        const newSubscription = await subscriptionModel.create(subscription);
+    } catch (error) {
+        console.error(error);
+    }
+    return null
+}
+
+// mongoose.set('strictQuery', true)
+mongoose.connect('mongodb+srv://admin:admin12345@cluster0.uqsov2y.mongodb.net/pushMsg')
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('Failed to connect to MongoDB', err));
 
-app.listen(port, () => console.log(`App running on port ${port}`));
+
+const PORT = process.env.PORT || 9000;
+app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
+});

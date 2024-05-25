@@ -2,16 +2,11 @@ self.addEventListener('activate', function(event) {
     console.log('Service worker activated');
 });
 
-self.addEventListener('push', async function(event) {
-    console.log('Notifications will be displayed here');
-    const message = await event.data.json();
-    const { title, description, image } = message;
-    console.log({ message });
-    await event.waitUntil(
-        self.registration.showNotification(title, {
-            body: description,
-            icon: image,
-            vibrate: [300, 100, 400],
-        })
-    );
+self.addEventListener("push", async e => {
+//   const data = e.data.json();
+  console.log("Push Recieved...");
+  self.registration.showNotification("title", {
+    body: "Notified by Daily Dose.",
+    icon: "https://images.newscientist.com/wp-content/uploads/2019/06/18153152/medicineshutterstock_1421041688.jpg?width=1200"
+  });
 });

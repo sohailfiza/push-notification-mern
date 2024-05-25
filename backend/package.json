@@ -2,10 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "nodemon serverjs",
     "gen_vapid_keys": " web-push generate-vapid-keys [--json]",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
